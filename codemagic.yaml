@@ -4,15 +4,14 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 60
     environment:
-      groups:
-        - google_play
+      vars:
+        GEMINI_API_KEY: $GEMINI_API_KEY
     scripts:
-      - name: Set up JDK 17
+            - name: Set up JDK 17
         script: |
           java -version
-      - name: Build debug APK
+            - name: Build debug APK
         script: |
-          cd $CM_BUILD_DIR
-          gradle assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon
     artifacts:
-      - app/build/outputs/apk/debug/*.apk
+            - app/build/outputs/apk/debug/*.apk
