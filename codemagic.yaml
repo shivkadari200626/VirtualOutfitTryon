@@ -11,8 +11,13 @@ workflows:
       - name: Set up JDK 17
         script: |
           java -version
+      - name: Fix gradlew + download wrapper
+        script: |
+          sed -i 's/\r$//' gradlew || true
+          chmod +x gradlew
+          gradle wrapper --gradle-version 8.4
       - name: Build debug APK
         script: |
-          gradle assembleDebug --no-daemon
+          ./gradlew assembleDebug --no-daemon --stacktrace
     artifacts:
       - app/build/outputs/apk/debug/*.apk
