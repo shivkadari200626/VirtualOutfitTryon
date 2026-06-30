@@ -1,14 +1,15 @@
 package com.kannod.virtualcloset
 
 import android.Manifest
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
@@ -16,151 +17,171 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModelProvider
 import com.kannod.virtualcloset.databinding.ActivityMainBinding
-import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class MainActivity : AppCompatActivity() {
-    
+class Mainactivity : AppCompatActivity() {
+
     private lateinit var binding: ActivityMainBinding
     private var imageCapture: ImageCapture? = null
     private lateinit var cameraExecutor: ExecutorService
-    
-    private var personBitmap: Bitmap? = null
-    private var garmentBitmap: Bitmap? = null
-    
-    private val viewModel: TryOnViewModel by viewModels {
-        TryOnViewModelFactory(StyleSnapRepository(RetrofitClient.geminiApi))
-    }
+    private lateinit var viewModel: TryOnViewModel
 
-    private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        uri?.let {
-            val inputStream = contentResolver.openInputStream(it)
-            garmentBitmap = BitmapFactory.decodeStream(inputStream)
-            binding.stepText.text = "Step 3: Generate your try-on"
-            binding.btnGenerate.isEnabled = true
-            Toast.makeText(this, "Garment selected", Toast.LENGTH_SHORT).show()
+    private val activityResultLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            var permissionGranted = true
+            permissions.entries.forEach {
+                if (it.key in REQUIRED_PERMISSIONS && !it.value)
+                    permissionGranted = false
+            }
+            if (!permissionGranted) {
+                Toast.makeText(this, "Camera permission required", Toast.LENGTH_SHORT).show()
+                finish()
+            } else {
+                startCamera()
+            }
         }
-    }
-
-    private val requestPermission = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) startCamera()
-        else Toast.makeText(this, "Camera permission required", Toast.LENGTH_LONG).show()
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        viewModel = ViewModelProvider(this)[TryOnViewModel::class.java]
         cameraExecutor = Executors.newSingleThreadExecutor()
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) 
-            == PackageManager.PERMISSION_GRANTED) {
+        if (allPermissionsGranted()) {
             startCamera()
         } else {
-            requestPermission.launch(Manifest.permission.CAMERA)
+            requestPermissions()
         }
 
-        binding.btnCapture.setOnClickListener { takePhoto() }
-        binding.btnPickGarment.setOnClickListener { pickImage.launch("image/*") }
-        binding.btnGenerate.setOnClickListener { generateTryOn() }
+        binding.captureButton.setOnClickListener {
+            takePhoto()
+        }
 
-        setupObservers()
+        observeViewModel()
     }
 
-    private fun setupObservers() {
-        viewModel.isLoading.observe(this) { loading ->
-            binding.progressBar.visibility = if (loading) android.view.View.VISIBLE else android.view.View.GONE
-            binding.btnGenerate.isEnabled = !loading
-            binding.statusText.text = if (loading) "Generating... This takes ~10s" else ""
-        }
-
-        viewModel.resultBitmap.observe(this) { bitmap ->
-            bitmap?.let {
-                val file = File(cacheDir, "tryon_result.jpg")
-                file.outputStream().use { out -> it.compress(Bitmap.CompressFormat.JPEG, 100, out) }
-                
+    private fun observeViewModel() {
+        viewModel.resultImage.observe(this) { bitmap ->
+            if (bitmap != null) {
                 val intent = Intent(this, ResultActivity::class.java)
-                intent.putExtra("result_path", file.absolutePath)
+                // Convert bitmap to byte array to pass
+                val stream = java.io.ByteArrayOutputStream()
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, stream)
+                val byteArray = stream.toByteArray()
+                intent.putExtra("result_image", byteArray)
                 startActivity(intent)
             }
         }
 
-        viewModel.error.observe(this) { error ->
-            error?.let {
-                Toast.makeText(this, "Error: $it", Toast.LENGTH_LONG).show()
-                binding.statusText.text = "Failed. Try again."
+        viewModel.error.observe(this) { errorMsg ->
+            errorMsg?.let {
+                Toast.makeText(this, it, Toast.LENGTH_LONG).show()
             }
         }
     }
 
-    private fun startCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-        cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
-            
-            val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(binding.viewFinder.surfaceProvider)
-            }
-
-            imageCapture = ImageCapture.Builder()
-                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-                .build()
-
-            val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
-
-            try {
-                cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture)
-            } catch (e: Exception) {
-                Toast.makeText(this, "Camera failed: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }, ContextCompat.getMainExecutor(this))
-    }
-
     private fun takePhoto() {
         val imageCapture = imageCapture ?: return
-        
-        val photoFile = File(cacheDir, "person_${System.currentTimeMillis()}.jpg")
-        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+
+        val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US)
+            .format(System.currentTimeMillis())
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
+                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/VirtualCloset")
+            }
+        }
+
+        val outputOptions = ImageCapture.OutputFileOptions
+            .Builder(contentResolver, MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+            .build()
 
         imageCapture.takePicture(
             outputOptions,
             ContextCompat.getMainExecutor(this),
             object : ImageCapture.OnImageSavedCallback {
-                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    personBitmap = BitmapFactory.decodeFile(photoFile.absolutePath)
-                    binding.stepText.text = "Step 2: Pick a garment"
-                    binding.btnPickGarment.isEnabled = true
-                    binding.btnCapture.isEnabled = false
-                    Toast.makeText(baseContext, "Photo captured", Toast.LENGTH_SHORT).show()
+                override fun onError(exc: ImageCaptureException) {
+                    Log.e(TAG, "Photo capture failed: ${exc.message}", exc)
                 }
 
-                override fun onError(exc: ImageCaptureException) {
-                    Toast.makeText(baseContext, "Capture failed: ${exc.message}", Toast.LENGTH_SHORT).show()
+                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                    val msg = "Photo saved: ${output.savedUri}"
+                    Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
+                    Log.d(TAG, msg)
+
+                    // Send to Gemini API
+                    output.savedUri?.let { uri ->
+                        val apiKey = BuildConfig.GEMINI_API_KEY
+                        if (apiKey.isBlank()) {
+                            Toast.makeText(baseContext, "API key missing", Toast.LENGTH_SHORT).show()
+                            return
+                        }
+                        viewModel.generateOutfit(uri, apiKey, contentResolver)
+                    }
                 }
             }
         )
     }
 
-    private fun generateTryOn() {
-        val person = personBitmap
-        val garment = garmentBitmap
-        
-        if (person == null || garment == null) {
-            Toast.makeText(this, "Missing images", Toast.LENGTH_SHORT).show()
-            return
-        }
-        
-        viewModel.generate(person, garment, BuildConfig.GEMINI_API_KEY)
+    private fun startCamera() {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+
+        cameraProviderFuture.addListener({
+            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+
+            val preview = Preview.Builder()
+                .build()
+                .also {
+                    it.setSurfaceProvider(binding.previewView.surfaceProvider)
+                }
+
+            imageCapture = ImageCapture.Builder().build()
+
+            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+            try {
+                cameraProvider.unbindAll()
+                cameraProvider.bindToLifecycle(
+                    this, cameraSelector, preview, imageCapture
+                )
+            } catch (exc: Exception) {
+                Log.e(TAG, "Use case binding failed", exc)
+            }
+
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    private fun requestPermissions() {
+        activityResultLauncher.launch(REQUIRED_PERMISSIONS)
+    }
+
+    private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
+        ContextCompat.checkSelfPermission(baseContext, it) == PackageManager.PERMISSION_GRANTED
     }
 
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
+    }
+
+    companion object {
+        private const val TAG = "MainActivity"
+        private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
+        private val REQUIRED_PERMISSIONS =
+            mutableListOf(
+                Manifest.permission.CAMERA
+            ).apply {
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                    add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                }
+            }.toTypedArray()
     }
 }
