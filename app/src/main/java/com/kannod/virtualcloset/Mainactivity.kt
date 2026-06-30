@@ -124,7 +124,7 @@ class Mainactivity : AppCompatActivity() {
                             Toast.makeText(baseContext, "API key missing", Toast.LENGTH_SHORT).show()
                             return
                         }
-                        viewModel.generateOutfit(uri, apiKey, contentResolver)
+                        viewModel.generateOutfit(imageUri, BuildConfig.GEMINI_API_KEY, contentResolver)
                     }
                 }
             }
