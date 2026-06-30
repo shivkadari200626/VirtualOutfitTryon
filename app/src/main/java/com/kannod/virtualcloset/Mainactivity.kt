@@ -120,12 +120,12 @@ class Mainactivity : AppCompatActivity() {
 
                     // Send to Gemini API
                     output.savedUri?.let { uri ->
-                        val apiKey = BuildConfig.GEMINI_API_KEY
-                        if (apiKey.isBlank()) {
-                            Toast.makeText(baseContext, "API key missing", Toast.LENGTH_SHORT).show()
-                            return
-                        }
-                        viewModel.generateOutfit(imageUri, BuildConfig.GEMINI_API_KEY, contentResolver)
+                           val apiKey = BuildConfig.GEMINI_API_KEY
+                           if (apiKey.isBlank()) {
+                              Toast.makeText(baseContext, "API key missing", Toast.LENGTH_SHORT).show()
+                              return
+                            }
+                           viewModel.generateOutfit(uri, apiKey, contentResolver) // use 'uri' not 'imageUri'
                     }
                 }
             }
