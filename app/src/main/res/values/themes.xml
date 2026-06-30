@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.StyleSnap" parent="Theme.Material3.Dark">
+        <item name="colorPrimary">#006686</item> <!-- primary_40 from JSON -->
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#004D66</item> <!-- primary_30 -->
+        <item name="colorSecondary">#4D616C</item> <!-- secondary_40 -->
+        <item name="colorSurface">#0E1113</item> <!-- neutral_5 - deep charcoal -->
+        <item name="colorOnSurface">#E1E2E5</item> <!-- neutral_90 -->
+        <item name="android:colorBackground">#0E1113</item> <!-- neutral_5 -->
+        <item name="colorSurfaceVariant">#40484C</item> <!-- neutralVariant_30 -->
+        <item name="android:statusBarColor">#0E1113</item>
+    </style>
+</resources>
