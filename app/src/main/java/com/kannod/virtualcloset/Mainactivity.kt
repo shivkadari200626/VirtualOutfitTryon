@@ -65,6 +65,7 @@ class Mainactivity : AppCompatActivity() {
         }
 
         observeViewModel()
+        Log.d("API_KEY_DEBUG", "Key: ${BuildConfig.GEMINI_API_KEY}")
     }
 
     private fun observeViewModel() {
