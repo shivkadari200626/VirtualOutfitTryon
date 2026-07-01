@@ -10,7 +10,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.ai.client.generativeai.GenerativeModel
-import com.google.ai.client.generativeai.type.BlobPart
+import com.google.ai.client.generativeai.type.InlineDataPart  // Changed from BlobPart
 import com.google.ai.client.generativeai.type.content
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -55,11 +55,11 @@ class TryOnViewModel : ViewModel() {
 
                 val imagePart = response.candidates
                     ?.firstOrNull()?.content?.parts
-                    ?.filterIsInstance<BlobPart>()
+                    ?.filterIsInstance<InlineDataPart>()  // Changed from BlobPart
                     ?.firstOrNull()
 
                 if (imagePart != null) {
-                    val imageBytes = imagePart.blob.data  // <-- Changed from .bytes to .data
+                    val imageBytes = imagePart.inlineData.bytes  // Changed from blob.data
                     val resultBitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
                     _resultImage.postValue(resultBitmap)
                 } else {
