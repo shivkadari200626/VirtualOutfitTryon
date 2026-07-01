@@ -8,11 +8,21 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        val props = java.util.Properties()
-        file("../local.properties").inputStream().use { props.load(it) }
-        buildConfigField("String", "GROQ_API_KEY", "\"${props["GROQ_API_KEY"]}\"")
+        applicationId = "com.kannod.virtualcloset"
+        minSdk = 24
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
+
+        // Load API key from local.properties
+        val properties = java.util.Properties()
+        val localPropsFile = rootProject.file("local.properties")
+        if (localPropsFile.exists()) {
+            properties.load(localPropsFile.inputStream())
+        }
+        buildConfigField("String", "GROQ_API_KEY", "\"${properties.getProperty("GROQ_API_KEY", "")}\"")
     }
-    buildFeatures.buildConfig = true
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -25,7 +35,7 @@ android {
 
     buildFeatures {
         viewBinding = true
-        buildConfig = true
+        buildConfig = true  // Only need this once, here
     }
 
     compileOptions {
@@ -57,20 +67,21 @@ dependencies {
 
     implementation("com.google.mlkit:pose-detection:18.0.0-beta5")
     implementation("com.google.mlkit:pose-detection-accurate:18.0.0-beta5")
+    implementation("com.google.mlkit:face-detection:16.1.7")
 
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-
-    implementation "com.google.mlkit:face-detection:16.1.7"
-    implementation "androidx.exifinterface:exifinterface:1.3.7"
-    implementation "com.squareup.okhttp3:okhttp:4.12.0"
 }
