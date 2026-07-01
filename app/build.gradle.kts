@@ -8,16 +8,11 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.kannod.virtualcloset"
-        minSdk = 24
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "GEMINI_API_KEY", "\"${System.getenv("GEMINI_API_KEY") ?: ""}\"")
+        val props = java.util.Properties()
+        file("../local.properties").inputStream().use { props.load(it) }
+        buildConfigField("String", "GROQ_API_KEY", "\"${props["GROQ_API_KEY"]}\"")
     }
-
+    buildFeatures.buildConfig = true
     buildTypes {
         release {
             isMinifyEnabled = false
