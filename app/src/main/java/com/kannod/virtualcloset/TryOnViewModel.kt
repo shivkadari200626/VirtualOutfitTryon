@@ -29,7 +29,7 @@ class TryOnViewModel : ViewModel() {
             _error.postValue(null) // Clear previous error
             try {
                 val generativeModel = GenerativeModel(
-                    modelName = "gemini-1.5-flash",
+                    modelName = "gemini-1.5-pro",
                     apiKey = apiKey
                 )
 
