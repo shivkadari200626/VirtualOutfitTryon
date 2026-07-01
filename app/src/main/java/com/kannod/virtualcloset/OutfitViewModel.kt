@@ -35,7 +35,7 @@ class OutfitViewModel : ViewModel() {
         .readTimeout(60, TimeUnit.SECONDS)
         .build()
 
-    private val GROQ_API_KEY = BuildConfig.GROQ_API_KEY // Get from https://console.groq.com/keys
+    private val GROQ_API_KEY = BuildConfig.GROQ_API_KEY
 
     fun generateOutfit(context: Context, imageUri: Uri, userPrompt: String) {
         viewModelScope.launch {
@@ -91,4 +91,18 @@ class OutfitViewModel : ViewModel() {
                     .build()
             )
 
-            val faces = detector.process(image).
+            val faces = detector.process(image).await()  // You were missing .await()
+            if (faces.isNotEmpty()) {
+                val mutableBitmap = scaledBitmap.copy(Bitmap.Config.ARGB_8888, true)
+                val canvas = Canvas(mutableBitmap)
+                val paint = Paint().apply {
+                    isAntiAlias = true
+                    maskFilter = BlurMaskFilter(30f, BlurMaskFilter.Blur.NORMAL)
+                }
+
+                for (face in faces) {
+                    val bounds = face.boundingBox
+                    val expandedBounds = RectF(bounds).apply {
+                        inset(-bounds.width() * 0.15f, -bounds.height() * 0.15f)
+                    }
+                    canvas
