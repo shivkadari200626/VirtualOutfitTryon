@@ -26,14 +26,13 @@ class TryOnViewModel : ViewModel() {
 
     fun generateOutfit(imageUri: Uri, apiKey: String, contentResolver: ContentResolver) {
         viewModelScope.launch {
-            _error.postValue(null) // Clear previous error
+            _error.postValue(null)
             try {
                 val generativeModel = GenerativeModel(
                     modelName = "gemini-1.5-pro",
                     apiKey = apiKey
                 )
 
-                // Run IO on background thread
                 val bitmap = withContext(Dispatchers.IO) {
                     contentResolver.openInputStream(imageUri)?.use { inputStream ->
                         BitmapFactory.decodeStream(inputStream)
@@ -54,14 +53,13 @@ class TryOnViewModel : ViewModel() {
 
                 val response = generativeModel.generateContent(content)
 
-                // Gemini returns images as BlobPart in 0.9.0
                 val imagePart = response.candidates
                     ?.firstOrNull()?.content?.parts
                     ?.filterIsInstance<BlobPart>()
                     ?.firstOrNull()
 
                 if (imagePart != null) {
-                    val imageBytes = imagePart.blob.bytes
+                    val imageBytes = imagePart.blob.data  // <-- Changed from .bytes to .data
                     val resultBitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
                     _resultImage.postValue(resultBitmap)
                 } else {
