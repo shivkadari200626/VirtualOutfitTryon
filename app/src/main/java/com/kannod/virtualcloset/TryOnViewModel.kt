@@ -10,7 +10,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.ai.client.generativeai.GenerativeModel
-import com.google.ai.client.generativeai.type.InlineDataPart
+import com.google.ai.client.generativeai.type.BlobPart
 import com.google.ai.client.generativeai.type.content
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -56,19 +56,19 @@ class TryOnViewModel : ViewModel() {
 
                 // Gemini 1.5 Flash returns images as InlineDataPart
                 val imagePart = response.candidates
-                    ?.firstOrNull()?.content?.parts
-                    ?.filterIsInstance<InlineDataPart>()
-                    ?.firstOrNull()
+    ?.firstOrNull()?.content?.parts
+    ?.filterIsInstance<BlobPart>()  // Changed from InlineDataPart
+    ?.firstOrNull()
 
-                if (imagePart != null) {
-                    val imageBytes = imagePart.inlineData
-                    val resultBitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                    _resultImage.postValue(resultBitmap)
-                } else {
-                    val textResponse = response.text
-                    Log.d("GeminiVM", "No image in response. Text: $textResponse")
-                    _error.postValue("Gemini didn't return an image: ${textResponse ?: "Empty response"}")
-                }
+if (imagePart != null) {
+    val imageBytes = imagePart.blob.bytes // Changed from .inlineData
+    val resultBitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+    _resultImage.postValue(resultBitmap)
+} else {
+    val textResponse = response.text
+    Log.d("GeminiVM", "No image in response. Text: $textResponse")
+    _error.postValue("Gemini didn't return an image: ${textResponse ?: "Empty response"}")
+}
 
             } catch (e: Exception) {
                 Log.e("GeminiVM", "Error: ${e.message}", e)
