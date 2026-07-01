@@ -54,21 +54,21 @@ class TryOnViewModel : ViewModel() {
 
                 val response = generativeModel.generateContent(content)
 
-                // Gemini 1.5 Flash returns images as InlineDataPart
+                // Gemini returns images as BlobPart in 0.9.0
                 val imagePart = response.candidates
-    ?.firstOrNull()?.content?.parts
-    ?.filterIsInstance<BlobPart>()  // Changed from InlineDataPart
-    ?.firstOrNull()
+                    ?.firstOrNull()?.content?.parts
+                    ?.filterIsInstance<BlobPart>()
+                    ?.firstOrNull()
 
-if (imagePart != null) {
-    val imageBytes = imagePart.blob.bytes // Changed from .inlineData
-    val resultBitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-    _resultImage.postValue(resultBitmap)
-} else {
-    val textResponse = response.text
-    Log.d("GeminiVM", "No image in response. Text: $textResponse")
-    _error.postValue("Gemini didn't return an image: ${textResponse ?: "Empty response"}")
-}
+                if (imagePart != null) {
+                    val imageBytes = imagePart.blob.bytes
+                    val resultBitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                    _resultImage.postValue(resultBitmap)
+                } else {
+                    val textResponse = response.text
+                    Log.d("GeminiVM", "No image in response. Text: $textResponse")
+                    _error.postValue("Gemini didn't return an image: ${textResponse ?: "Empty response"}")
+                }
 
             } catch (e: Exception) {
                 Log.e("GeminiVM", "Error: ${e.message}", e)
@@ -84,4 +84,4 @@ if (imagePart != null) {
     fun clearResult() {
         _resultImage.value = null
     }
-} // Class closes here
+}
