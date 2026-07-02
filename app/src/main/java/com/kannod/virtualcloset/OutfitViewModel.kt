@@ -91,7 +91,7 @@ class OutfitViewModel : ViewModel() {
                     .build()
             )
 
-            val faces = detector.process(image).await()  // You were missing .await()
+            val faces = detector.process(image).await()
             if (faces.isNotEmpty()) {
                 val mutableBitmap = scaledBitmap.copy(Bitmap.Config.ARGB_8888, true)
                 val canvas = Canvas(mutableBitmap)
@@ -105,4 +105,71 @@ class OutfitViewModel : ViewModel() {
                     val expandedBounds = RectF(bounds).apply {
                         inset(-bounds.width() * 0.15f, -bounds.height() * 0.15f)
                     }
-                    canvas
+                    canvas.drawOval(expandedBounds, paint)
+                }
+                finalBitmap = mutableBitmap
+            }
+            detector.close()
+        }
+
+        // 4. Convert to JPEG - nukes any remaining metadata
+        val outputStream = ByteArrayOutputStream()
+        finalBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
+
+        // Cleanup
+        if (scaledBitmap != originalBitmap) scaledBitmap.recycle()
+        if (finalBitmap != scaledBitmap && finalBitmap != originalBitmap) finalBitmap.recycle()
+        originalBitmap.recycle()
+
+        outputStream.toByteArray()
+    }
+
+    private suspend fun callGroqApi(base64Image: String, prompt: String): String = withContext(Dispatchers.IO) {
+        val json = JSONObject().apply {
+            put("model", "llama-3.2-90b-vision-preview")
+            put("messages", JSONArray().apply {
+                put(JSONObject().apply {
+                    put("role", "user")
+                    put("content", JSONArray().apply {
+                        put(JSONObject().apply {
+                            put("type", "text")
+                            put("text", prompt)
+                        })
+                        put(JSONObject().apply {
+                            put("type", "image_url")
+                            put("image_url", JSONObject().apply {
+                                put("url", "data:image/jpeg;base64,$base64Image")
+                            })
+                        })
+                    })
+                })
+            })
+            put("max_tokens", 1024)
+            put("temperature", 0.7)
+        }
+
+        val requestBody = json.toString().toRequestBody("application/json".toMediaType())
+
+        val request = Request.Builder()
+            .url("https://api.groq.com/openai/v1/chat/completions")
+            .addHeader("Authorization", "Bearer $GROQ_API_KEY")
+            .addHeader("Content-Type", "application/json")
+            .post(requestBody)
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                val errorBody = response.body?.string()
+                Log.e("OutfitViewModel", "Groq error ${response.code}: $errorBody")
+                throw Exception("Groq API error ${response.code}")
+            }
+            val responseBody = response.body?.string() ?: throw Exception("Empty response")
+            val jsonResponse = JSONObject(responseBody)
+            return@withContext jsonResponse
+                .getJSONArray("choices")
+                .getJSONObject(0)
+                .getJSONObject("message")
+                .getString("content")
+        }
+    }
+} // <-- This closing
