@@ -50,16 +50,14 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // 1. This was missing - you need view binding
         binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root) // Use binding.root, not R.layout.activity_main
+        setContentView(binding.root)
         
         Log.d("API_KEY", "Key: ${BuildConfig.GROQ_API_KEY}")
         if (BuildConfig.GROQ_API_KEY.isEmpty()) {
             Toast.makeText(this, "API KEY MISSING", Toast.LENGTH_LONG).show()
         }
 
-        // 2. All this code needs to be INSIDE onCreate
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         if (allPermissionsGranted()) {
@@ -73,7 +71,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         observeViewModel()
-    } // <-- onCreate() ends here now
+    } // onCreate ends here
 
     private fun observeViewModel() {
         lifecycleScope.launch {
@@ -168,4 +166,12 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
-        private const val FILENAME
+        private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
+        private val REQUIRED_PERMISSIONS =
+            mutableListOf(Manifest.permission.CAMERA).apply {
+                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                    add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                }
+            }.toTypedArray()
+    }
+} // class MainActivity ends here
