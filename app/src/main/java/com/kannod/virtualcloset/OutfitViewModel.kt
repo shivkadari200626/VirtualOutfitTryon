@@ -1,5 +1,5 @@
 package com.kannod.virtualcloset
-
+import com.kannod.virtualcloset.BuildConfig
 import android.content.Context
 import android.graphics.*
 import android.net.Uri
