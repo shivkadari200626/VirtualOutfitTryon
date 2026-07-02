@@ -1,25 +1,22 @@
-import java.util.Properties
-import java.io.FileInputStream
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
 
 android {
-    namespace = "com.kannod.virtualcloset" // Required
-    compileSdk = 34 // Required
+    namespace = "com.kannod.virtualcloset"
+    compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.kannod.virtualcloset" // Required
-        minSdk = 24 // Required for CameraX
-        targetSdk = 34 // Required
+        applicationId = "com.kannod.virtualcloset"
+        minSdk = 24
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
         // Reads from: 1. Codemagic env var 2. local.properties 3. empty string
         val groqApiKey = System.getenv("GROQ_API_KEY") ?: run {
-            val properties = java.util.Properties()
+            val properties = Properties() // Removed java.util. prefix
             val localPropertiesFile = rootProject.file("local.properties")
             if (localPropertiesFile.exists()) {
                 localPropertiesFile.inputStream().use { properties.load(it) }
@@ -35,15 +32,15 @@ android {
         buildConfig = true
     }
 
-    compileOptions { // This must be inside android block
+    compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
 
-    kotlinOptions { // This must be inside android block
+    kotlinOptions {
         jvmTarget = "1.8"
     }
-} // android block ends here
+}
 
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
