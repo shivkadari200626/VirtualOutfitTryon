@@ -7,7 +7,16 @@ plugins {
 }
 
 android {
+    namespace = "com.kannod.virtualcloset" // Required
+    compileSdk = 34 // Required
+
     defaultConfig {
+        applicationId = "com.kannod.virtualcloset" // Required
+        minSdk = 24 // Required for CameraX
+        targetSdk = 34 // Required
+        versionCode = 1
+        versionName = "1.0"
+
         // Reads from: 1. Codemagic env var 2. local.properties 3. empty string
         val groqApiKey = System.getenv("GROQ_API_KEY") ?: run {
             val properties = java.util.Properties()
@@ -25,17 +34,16 @@ android {
         viewBinding = true
         buildConfig = true
     }
-}
 
-    compileOptions {
+    compileOptions { // This must be inside android block
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
 
-    kotlinOptions {
+    kotlinOptions { // This must be inside android block
         jvmTarget = "1.8"
     }
-}
+} // android block ends here
 
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
