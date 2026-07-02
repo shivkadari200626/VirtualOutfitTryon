@@ -2,7 +2,6 @@ package com.kannod.virtualcloset
 
 import android.Manifest
 import android.content.ContentValues
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -30,7 +29,7 @@ import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private val viewModel: OutfitViewModel by viewModels() // Using OutfitViewModel now
+    private val viewModel: OutfitViewModel by viewModels()
     private var imageCapture: ImageCapture? = null
     private lateinit var cameraExecutor: ExecutorService
 
@@ -49,15 +48,18 @@ class MainActivity : AppCompatActivity() {
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    setContentView(R.layout.activity_main)
-    
-    Log.d("API_KEY", "Key: ${BuildConfig.GROQ_API_KEY}") // Add this
-    if (BuildConfig.GROQ_API_KEY.isEmpty()) {
-        Toast.makeText(this, "API KEY MISSING", Toast.LENGTH_LONG).show()
-    }
-}
+        super.onCreate(savedInstanceState)
+        
+        // 1. This was missing - you need view binding
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root) // Use binding.root, not R.layout.activity_main
+        
+        Log.d("API_KEY", "Key: ${BuildConfig.GROQ_API_KEY}")
+        if (BuildConfig.GROQ_API_KEY.isEmpty()) {
+            Toast.makeText(this, "API KEY MISSING", Toast.LENGTH_LONG).show()
+        }
 
+        // 2. All this code needs to be INSIDE onCreate
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         if (allPermissionsGranted()) {
@@ -71,10 +73,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         observeViewModel()
-    }
+    } // <-- onCreate() ends here now
 
     private fun observeViewModel() {
-        // Listen for text results from Groq
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { result ->
@@ -85,9 +86,6 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-
-        // Keep your old error handling if OutfitViewModel has it
-        // viewModel.error.observe(this) { ... }
     }
 
     private fun takePhoto() {
@@ -120,7 +118,6 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
                     Log.d(TAG, msg)
 
-                    // Send to Groq via OutfitViewModel
                     output.savedUri?.let { uri ->
                         viewModel.generateOutfit(this@MainActivity, uri, "Suggest an outfit for this")
                     }
@@ -171,12 +168,4 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
-        private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
-        private val REQUIRED_PERMISSIONS =
-            mutableListOf(Manifest.permission.CAMERA).apply {
-                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-                    add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                }
-            }.toTypedArray()
-    }
-}
+        private const val FILENAME
