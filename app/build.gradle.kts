@@ -3,6 +3,16 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// Load API key BEFORE android block
+val localProperties = java.util.Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.inputStream().use { localProperties.load(it) }
+}
+val groqApiKey: String = System.getenv("GROQ_API_KEY") 
+    ?: localProperties.getProperty("GROQ_API_KEY") 
+    ?: ""
+
 android {
     namespace = "com.kannod.virtualcloset"
     compileSdk = 34
@@ -14,16 +24,6 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        // Reads from: 1. Codemagic env var 2. local.properties 3. empty string
-        val groqApiKey = System.getenv("GROQ_API_KEY") ?: run {
-            val properties = java.util.Properties() // Use full package name
-            val localPropertiesFile = rootProject.file("local.properties")
-            if (localPropertiesFile.exists()) {
-                localPropertiesFile.inputStream().use { properties.load(it) }
-            }
-            properties.getProperty("GROQ_API_KEY", "")
-        }
-        
         buildConfigField("String", "GROQ_API_KEY", "\"$groqApiKey\"")
     }
 
