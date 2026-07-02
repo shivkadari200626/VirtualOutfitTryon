@@ -17,25 +17,21 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        // Load API key from local.properties - KTS version
-        val properties = Properties()
-        val localPropsFile = rootProject.file("local.properties")
-        if (localPropsFile.exists()) {
-            properties.load(FileInputStream(localPropsFile))
+        // Add this block
+        val localProperties = java.util.Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use { localProperties.load(it) }
         }
-        buildConfigField("String", "GROQ_API_KEY", "\"${properties.getProperty("GROQ_API_KEY", "")}\"")
+        val groqApiKey = localProperties.getProperty("GROQ_API_KEY") ?: ""
+        buildConfigField("String", "GROQ_API_KEY", "\"$groqApiKey\"")
     }
 
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
+    buildFeatures {
+        viewBinding = true
+        buildConfig = true  // This is critical
     }
-
+}
     buildFeatures {
         viewBinding = true
         buildConfig = true
