@@ -5,12 +5,12 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     
     <application
-    android:allowBackup="true"
-    android:icon="@android:drawable/sym_def_app_icon"
-    android:label="VirtualCloset"
-    android:roundIcon="@android:drawable/sym_def_app_icon"
-    android:supportsRtl="true"
-    android:theme="@style/Theme.VirtualCloset"
+        android:allowBackup="true"
+        android:icon="@android:drawable/sym_def_app_icon"
+        android:label="VirtualCloset"
+        android:roundIcon="@android:drawable/sym_def_app_icon"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.VirtualCloset"> <!-- Added > here -->
         
         <activity
             android:name=".MainActivity"
